@@ -5,6 +5,11 @@ from spacy.tokens import Doc
 import spacy.training
 from CleanRawTweets import CleanedTweets
 import random
+import time
+
+start_time = time.time()
+
+print("Loading Base Model!")
 
 # Load the base model
 nlp = spacy.load("en_core_web_lg")
@@ -27,6 +32,8 @@ train_data: list[tuple] = [i.GetCategory() for i in CleanedTweets]
 # Training function
 def train_model(nlp: spacy.language.Language, train_data:list[tuple], n_iter=10):       
     
+    print("Started Training")
+    
     text: list[str] = list(map(lambda x: x[0], train_data))
     annotations: list = list(map(lambda x: x[1], train_data))
     
@@ -36,7 +43,9 @@ def train_model(nlp: spacy.language.Language, train_data:list[tuple], n_iter=10)
     text_cat.initialize(lambda: examples, nlp=nlp)
     text_cat.update(examples, drop=0.5)
     
-    for _ in range(n_iter):
+    print("Completed Initialization!")
+    
+    for i in range(n_iter):
         random.shuffle(train_data)
         
         text: list[str] = list(map(lambda x: x[0], train_data))
@@ -49,9 +58,13 @@ def train_model(nlp: spacy.language.Language, train_data:list[tuple], n_iter=10)
 
         # Update the text categorizer
         nlp.update(examples, drop=0.5)
+        
+        print(f"{float(i + 1) / float(n_iter) * 100}% complete after {time.time() - start_time} Seconds")
 
 # Train the model
 train_model(nlp, train_data, n_iter=100)
 
 # Save the trained model
 nlp.to_disk("./trained_model.spacy")
+
+print(f"Done in {time.time() - start_time} Seconds")
