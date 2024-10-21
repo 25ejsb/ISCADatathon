@@ -23,13 +23,10 @@ text_cat.add_label("JEWS")
 text_cat.add_label("ISRAEL")
 text_cat.add_label("KIKES")
 text_cat.add_label("ZIONAZI")
-# Add more categories as needed
 
 
-# Combine the data
 train_data: list[tuple] = [i.GetCategory() for i in CleanedTweets]
 
-# Training function
 def train_model(nlp: spacy.language.Language, train_data:list[tuple], n_iter=10):       
     
     print("Started Training")
@@ -53,18 +50,14 @@ def train_model(nlp: spacy.language.Language, train_data:list[tuple], n_iter=10)
         
         text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
         
-        # Create the examples for text categorization
         examples: list[Example] = list(map(Example.from_dict, text_as_docs, annotations))
 
-        # Update the text categorizer
         nlp.update(examples, drop=0.5)
         
         print(f"{float(i + 1) / float(n_iter) * 100}% complete after {time.time() - start_time} Seconds")
 
-# Train the model
 train_model(nlp, train_data, n_iter=100)
 
-# Save the trained model
 nlp.to_disk("./trained_model.spacy")
 
 print(f"Done in {time.time() - start_time} Seconds")

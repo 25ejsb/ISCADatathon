@@ -2,7 +2,7 @@ import spacy
 
 class Tweet:
     
-    def __init__(self, ID:int, username:str, date:str, biased:int, keyword:str, text:str, parsed_text):
+    def __init__(self, ID:int, username:str, date:str, biased:int, keyword:str, text:str):
         
         self.ID = ID
         self.Username = username
@@ -10,7 +10,6 @@ class Tweet:
         self.Biased = biased
         self.Keyword = keyword
         self.Text = text
-        self.ParsedText = parsed_text
         
     def GetCategory(self) -> tuple:
         
@@ -21,7 +20,7 @@ class Tweet:
                                      "ZIONAZI": 1 if self.Keyword == 'ZioNazi' else 0}})
         
         
-def CleanTweet(data:str, nlp):
+def CleanTweet(data:str, nlp) -> Tweet:
     
     text_split = data.split(',')
     
@@ -39,9 +38,7 @@ def CleanTweet(data:str, nlp):
     
     text:str = RemoveLinks(','.join(text_split[5:]))
     
-    parsed_text = ''
-    
-    return Tweet(ID, username, date, biased, keyword, text, parsed_text)
+    return Tweet(ID, username, date, biased, keyword, text)
     
 
 def RemoveLinks(text:str):
@@ -49,9 +46,4 @@ def RemoveLinks(text:str):
     link_split_text:list[str] = text.split('https')
     
     return link_split_text[0]
-
-
-def ParseTweet(text:str, nlp):
-    
-    return nlp(text)
         
