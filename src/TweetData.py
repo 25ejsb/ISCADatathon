@@ -12,7 +12,7 @@ class Tweet:
         self.Text = text
         self.ParsedText = parsed_text
         
-    def GetCategory(self):
+    def GetCategory(self) -> tuple:
         
         return (self.Text, {"cats": {"BIASED": self.Biased, 
                                      "JEWS": 1 if self.Keyword == 'Jews' else 0,

@@ -1,6 +1,8 @@
 import spacy
 from spacy.training import Example
-from spacy.pipeline import TextCategorizer, Morphologizer
+from spacy.pipeline import TextCategorizer
+from spacy.tokens import Doc
+import spacy.training
 from CleanRawTweets import CleanedTweets
 import random
 
@@ -18,39 +20,38 @@ text_cat.add_label("KIKES")
 text_cat.add_label("ZIONAZI")
 # Add more categories as needed
 
-# Add a custom morphologizer
-nlp.add_pipe("morphologizer", last=True)
 
 # Combine the data
-train_data = [i.GetCategory() for i in CleanedTweets]
+train_data: list[tuple] = [i.GetCategory() for i in CleanedTweets]
 
 # Training function
-def train_model(nlp, train_data, n_iter=10):       
+def train_model(nlp: spacy.language.Language, train_data:list[tuple], n_iter=10):       
     
-    examples = []
-    for text, annotations in train_data:
-        doc = nlp.make_doc(text)
-        example = Example.from_dict(doc, annotations)
-        examples.append(example)
+    text: list[str] = list(map(lambda x: x[0], train_data))
+    annotations: list = list(map(lambda x: x[1], train_data))
+    
+    text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
+    examples: list[Example] = list(map(Example.from_dict, text_as_docs, annotations))
         
     text_cat.initialize(lambda: examples, nlp=nlp)
     text_cat.update(examples, drop=0.5)
     
-    for i in range(n_iter):
+    for _ in range(n_iter):
         random.shuffle(train_data)
         
+        text: list[str] = list(map(lambda x: x[0], train_data))
+        annotations: list = list(map(lambda x: x[1], train_data))
+        
+        text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
+        
         # Create the examples for text categorization
-        examples = []
-        for text, annotations in train_data:
-            doc = nlp.make_doc(text)
-            example = Example.from_dict(doc, annotations)
-            examples.append(example)
+        examples: list[Example] = list(map(Example.from_dict, text_as_docs, annotations))
 
         # Update the text categorizer
         nlp.update(examples, drop=0.5)
 
 # Train the model
-train_model(nlp, train_data, n_iter=10)
+train_model(nlp, train_data, n_iter=100)
 
 # Save the trained model
 nlp.to_disk("./trained_model.spacy")
