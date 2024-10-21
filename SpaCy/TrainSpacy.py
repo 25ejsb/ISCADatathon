@@ -19,10 +19,6 @@ if "textcat_multilabel" not in nlp.pipe_names:
     nlp.add_pipe("textcat_multilabel", last=True)
 text_cat = nlp.get_pipe("textcat_multilabel")
 text_cat.add_label("BIASED")
-text_cat.add_label("JEWS")
-text_cat.add_label("ISRAEL")
-text_cat.add_label("KIKES")
-text_cat.add_label("ZIONAZI")
 
 
 train_data: list[tuple] = [i.GetCategory() for i in CleanedTweets]

@@ -13,11 +13,7 @@ class Tweet:
         
     def GetCategory(self) -> tuple:
         
-        return (self.Text, {"cats": {"BIASED": self.Biased, 
-                                     "JEWS": 1 if self.Keyword == 'Jews' else 0,
-                                     "ISREAL": 1 if self.Keyword == 'Isreal' else 0,
-                                     "KIKES": 1 if self.Keyword == 'Kikes' else 0,
-                                     "ZIONAZI": 1 if self.Keyword == 'ZioNazi' else 0}})
+        return (self.Text, {"cats": {"BIASED": self.Biased,}})
         
         
 def CleanTweet(data:str, nlp) -> Tweet:
