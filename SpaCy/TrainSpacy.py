@@ -52,7 +52,7 @@ def train_model(nlp: spacy.language.Language, train_data:list[tuple], n_iter=10)
         
         print(f"{float(i + 1) / float(n_iter) * 100}% complete after {time.time() - start_time} Seconds")
 
-train_model(nlp, train_data, n_iter=100)
+train_model(nlp, train_data, n_iter=1000)
 
 nlp.to_disk("./trained_model.spacy")
 
