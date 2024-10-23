@@ -4,3 +4,4 @@ USES THE BELOW PYTHON MODULES:
 
  - NLTK (pip install nltk)
  - Selenium (pip install selenium)
+ - SpaCy (pip install spacy)
