@@ -6,18 +6,17 @@ from spacy.pipeline import TextCategorizer
 from spacy.tokens import Doc
 import spacy.training
 import os, json
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
 
 API_KEY = os.environ.get("API_KEY")
 
 nlp = spacy.load("en_core_web_lg")
-if "textcat_multilabel" not in nlp.pipe_names:
-    nlp.add_pipe("textcat_multilabel", last=True)
-text_cat: TextCategorizer = nlp.get_pipe("textcat_multilabel")
-text_cat.add_label("score")
 
 pd = pandas.read_csv("./GoldStandard2024_Participants.csv")
 
-training_data = []
+texts = []
+scores = []
 
 amount_to_check = 20
 
@@ -39,20 +38,31 @@ for (row, item) in pd.iterrows():
 
         response = client.comments().analyze(body=analyze_request).execute()
 
-        score = str(eval(json.dumps(response, indent=2))["attributeScores"]["TOXICITY"]["summaryScore"]["value"])
+        score = eval(json.dumps(response, indent=2))["attributeScores"]["TOXICITY"]["summaryScore"]["value"]
 
-        training_data.append((item.Text, {"words": score}))
+        texts.append(item.Text)
+        scores.append(score)
 
         num+=1
     else: break
 
-text: list[str] = list(map(lambda x: x[0], training_data))
-scores: list = list(map(lambda x: x[1], training_data))
+text_vectors = np.array([nlp(text).vector for text in texts])
 
-text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
-examples: list[Example] = list(map(Example.from_dict, text_as_docs, scores))
+# Step 2: Scale the scores to match the range of text embeddings
+# For compatibility, we reshape scores to fit the shape of the text embeddings.
+scaler = MinMaxScaler()
+scaled_scores = scaler.fit_transform(np.array(scores).reshape(-1, 1))
 
-text_cat.initialize(lambda: examples, nlp=nlp)
-text_cat.update(examples, drop=0.5)
+# Expand scaled scores to match text vector dimensions
+score_vectors = np.tile(scaled_scores, (1, text_vectors.shape[1]))
 
-nlp.to_disk("./train.spacy")
+# Step 3: Compute the cosine similarity between each text vector and its corresponding score vector
+similarities = np.array([np.dot(text_vectors[i], score_vectors[i]) / 
+                         (np.linalg.norm(text_vectors[i]) * np.linalg.norm(score_vectors[i]))
+                         for i in range(len(texts))])
+
+# Display results
+for i, similarity in enumerate(similarities):
+    print(f"Text: {texts[i]}")
+    print(f"Score: {scores[i]}")
+    print(f"Similarity: {similarity:.4f}\n")
