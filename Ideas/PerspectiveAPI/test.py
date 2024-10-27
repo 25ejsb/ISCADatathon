@@ -7,7 +7,7 @@ import json, os
 load_dotenv()
 
 API_KEY = os.environ.get("API_KEY")
-text = "You realize that “children of Israel” means “children of Jacob,” because he was given the name Israel after wrestling an angel? It does not mean the land of Israel and certainly not the modern state of Israel."
+text = "We got very difficult situation with Kikes. They think they can buy our people, land, faith, but this will not happen. These Jewish degenerates defamed our Jesus Christ”. Antisemitic rally took place in Uman."
 
 client = discovery.build(
     "commentanalyzer",
@@ -19,11 +19,11 @@ client = discovery.build(
 
 analyze_request = {
     'comment': {"text": text},
-    'requestedAttributes': {'TOXICITY': {}}
+    'requestedAttributes': {'PROFANITY': {}}
 }
 
 blob = TextBlob(text)
 
 response = client.comments().analyze(body=analyze_request).execute()
-print("Toxicity: " + str(eval(json.dumps(response, indent=2))["attributeScores"]["TOXICITY"]["summaryScore"]["value"]))
-print("Polarity (Opinion): " + str(blob.polarity))
+print("Score: " + str(eval(json.dumps(response, indent=2))["attributeScores"]["PROFANITY"]["summaryScore"]["value"]))
+print("Polarity: " + str(blob.polarity))

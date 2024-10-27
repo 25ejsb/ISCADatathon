@@ -20,49 +20,52 @@ scores = []
 
 amount_to_check = 20
 
-num = 0
-for (row, item) in pd.iterrows():
-    if num <= 20:
-        client = discovery.build(
-            "commentanalyzer",
-            "v1alpha1",
-            developerKey=API_KEY,
-            discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
-            static_discovery=False
-        )
+def create_model(check):
+    num = 0
+    for (row, item) in pd.iterrows():
+        if num <= check:
+            client = discovery.build(
+                "commentanalyzer",
+                "v1alpha1",
+                developerKey=API_KEY,
+                discoveryServiceUrl="https://commentanalyzer.googleapis.com/$discovery/rest?version=v1alpha1",
+                static_discovery=False
+            )
 
-        analyze_request = {
-            'comment': {"text": item.Text},
-            'requestedAttributes': {'TOXICITY': {}}
-        }
+            analyze_request = {
+                'comment': {"text": item.Text},
+                'requestedAttributes': {'TOXICITY': {}}
+            }
 
-        response = client.comments().analyze(body=analyze_request).execute()
+            response = client.comments().analyze(body=analyze_request).execute()
 
-        score = eval(json.dumps(response, indent=2))["attributeScores"]["TOXICITY"]["summaryScore"]["value"]
+            score = eval(json.dumps(response, indent=2))["attributeScores"]["TOXICITY"]["summaryScore"]["value"]
 
-        texts.append(item.Text)
-        scores.append(score)
+            texts.append(item.Text)
+            scores.append(score)
 
-        num+=1
-    else: break
+            num+=1
+        else: break
 
-text_vectors = np.array([nlp(text).vector for text in texts])
+    text_vectors = np.array([nlp(text).vector for text in texts])
 
-# Step 2: Scale the scores to match the range of text embeddings
-# For compatibility, we reshape scores to fit the shape of the text embeddings.
-scaler = MinMaxScaler()
-scaled_scores = scaler.fit_transform(np.array(scores).reshape(-1, 1))
+    # Step 2: Scale the scores to match the range of text embeddings
+    # For compatibility, we reshape scores to fit the shape of the text embeddings.
+    scaler = MinMaxScaler()
+    scaled_scores = scaler.fit_transform(np.array(scores).reshape(-1, 1))
 
-# Expand scaled scores to match text vector dimensions
-score_vectors = np.tile(scaled_scores, (1, text_vectors.shape[1]))
+    # Expand scaled scores to match text vector dimensions
+    score_vectors = np.tile(scaled_scores, (1, text_vectors.shape[1]))
 
-# Step 3: Compute the cosine similarity between each text vector and its corresponding score vector
-similarities = np.array([np.dot(text_vectors[i], score_vectors[i]) / 
-                         (np.linalg.norm(text_vectors[i]) * np.linalg.norm(score_vectors[i]))
-                         for i in range(len(texts))])
+    # Step 3: Compute the cosine similarity between each text vector and its corresponding score vector
+    similarities = np.array([np.dot(text_vectors[i], score_vectors[i]) / 
+                            (np.linalg.norm(text_vectors[i]) * np.linalg.norm(score_vectors[i]))
+                            for i in range(len(texts))])
 
-# Display results
-for i, similarity in enumerate(similarities):
-    print(f"Text: {texts[i]}")
-    print(f"Score: {scores[i]}")
-    print(f"Similarity: {similarity:.4f}\n")
+    # Display results
+    for i, similarity in enumerate(similarities):
+        print(f"Text: {texts[i]}")
+        print(f"Score: {scores[i]}")
+        print(f"Similarity: {similarity:.4f}\n")
+
+create_model(check=20)
