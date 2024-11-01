@@ -23,10 +23,10 @@ text_cat.add_label("score")
 
 pd = pandas.read_csv("./GoldStandard2024_Participants.csv")
 training_data = []
-amount_to_check = 100
+amount_to_check = 60
 num = 0
 for (row, item) in pd.iterrows():
-    if num <= 20:
+    if num <= amount_to_check:
         client = discovery.build(
             "commentanalyzer",
             "v1alpha1",
