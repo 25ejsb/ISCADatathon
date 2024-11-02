@@ -18,7 +18,7 @@ pd = pandas.read_csv("./GoldStandard2024_Participants.csv")
 texts = []
 scores = []
 
-amount_to_check = 20
+amount_to_check = 60
 
 def create_model(check):
     num = 0
