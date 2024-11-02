@@ -6,9 +6,12 @@ import os
 
 genai.configure(api_key=API_KEY)
 
-model = genai.GenerativeModel("gemini-1.5-flash")
+model = genai.GenerativeModel(
+    "gemini-1.5-flash",
+    system_instruction="Give a rating, on a scale of 1 (least) through 10 (most), of how overall anti-semetic this tweet is. Explain your thought process.")
+
 response = model.generate_content(
-    "Only give the rating, no other information, a scale of 1 (least) through 10 (most), how anti-semetic is this tweet: You realize that “children of Israel” means “children of Jacob,” because he was given the name Israel after wrestling an angel? It does not mean the land of Israel and certainly not the modern state of Israel.",
+    "You realize that “children of Israel” means “children of Jacob,” because he was given the name Israel after wrestling an angel? It does not mean the land of Israel and certainly not the modern state of Israel.",
     safety_settings={
         HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
         HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
