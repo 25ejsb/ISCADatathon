@@ -11,7 +11,8 @@ start_time = time.time()
 print("Loading Base Model!")
 
 # Load the base model
-print("Using GPU!" if spacy.prefer_gpu(1) else "GPU not available")
+#print("Using GPU!" if spacy.prefer_gpu(0) else "GPU not available")
+    
 nlp = spacy.load("en_core_web_lg")
 
 # Create text categorizer with multi-label classification
