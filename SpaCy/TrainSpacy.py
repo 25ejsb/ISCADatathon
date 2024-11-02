@@ -1,6 +1,5 @@
 import spacy
 from spacy.training import Example
-from spacy.pipeline import TextCategorizer
 from spacy.tokens import Doc
 import spacy.training
 from CleanRawTweets import CleanedTweets
@@ -12,6 +11,7 @@ start_time = time.time()
 print("Loading Base Model!")
 
 # Load the base model
+print("Using GPU!" if spacy.prefer_gpu(1) else "GPU not available")
 nlp = spacy.load("en_core_web_lg")
 
 # Create text categorizer with multi-label classification
