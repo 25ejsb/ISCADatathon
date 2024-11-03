@@ -14,6 +14,6 @@ def GetData(tweet:str):
 
     doc: Doc = nlp(tweet)
     
-    return 1-doc.cats['score']
+    return doc.cats['score']
 
-print(GetData("ds"))
+print(GetData("asd"))
