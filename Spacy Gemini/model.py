@@ -17,6 +17,8 @@ load_dotenv()
 
 API_KEY = os.environ.get("API_KEY")
 
+spacy.prefer_gpu()
+
 nlp = spacy.load("en_core_web_lg")
 if "textcat_multilabel" not in nlp.pipe_names:
     nlp.add_pipe("textcat_multilabel", last=True)
@@ -61,15 +63,15 @@ text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
 examples: list[Example] = list(map(Example.from_dict, text_as_docs, scores))
 text_cat.initialize(lambda: examples, nlp=nlp)
 text_cat.update(examples, drop=0.5)
-for i in range(2):
-    random.shuffle(training_data)
+# for i in range(2):
+#     random.shuffle(training_data)
         
-    text: list[str] = list(map(lambda x: x[0], training_data))
-    annotations: list = list(map(lambda x: x[1], training_data))
+#     text: list[str] = list(map(lambda x: x[0], training_data))
+#     annotations: list = list(map(lambda x: x[1], training_data))
         
-    text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
+#     text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
         
-    examples: list[Example] = list(map(Example.from_dict, text_as_docs, annotations))
+#     examples: list[Example] = list(map(Example.from_dict, text_as_docs, annotations))
 
-    nlp.update(examples, drop=0.5)
+#     nlp.update(examples, drop=0.5)
 nlp.to_disk("./train.spacy")

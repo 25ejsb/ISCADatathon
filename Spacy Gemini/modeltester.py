@@ -16,4 +16,4 @@ def GetData(tweet:str):
     
     return doc.cats['score']
 
-print(GetData("i identify as a nazi"))
+print(GetData("test tweet"))
