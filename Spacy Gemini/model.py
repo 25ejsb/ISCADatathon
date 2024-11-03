@@ -29,9 +29,10 @@ pd = pandas.read_csv("./GoldStandard2024_Participants.csv")
 
 training_data = []
 
-model = genai.GenerativeModel("gemini-1.5-pro")
+model = genai.GenerativeModel("gemini-1.5-pro", 
+                              system_instruction="Only give the rating, no other information, a scale of 1 (least) through 100 (most) of how anti semetic it is, and write it as a list")
 response = model.generate_content(
-    f"Only give the rating, no other information, a scale of 1 (least) through 100 (most) of how anti semetic it is, and write it as a list {[str(row.Text) + ', ' for item, row in pd.head(300).iterrows()]}",
+    f"{[str(row.Text) + ', ' for item, row in pd.head(300).iterrows()]}",
     safety_settings={
         HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
         HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
