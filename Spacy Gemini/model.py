@@ -34,7 +34,7 @@ training_data = []
 model = genai.GenerativeModel("gemini-1.5-pro", 
                               system_instruction="Only give the rating, no other information, a scale of 1 (least) through 100 (most) of how anti semetic it is, and write it as a list")
 response = model.generate_content(
-    f"{[str(row.Text) + ', ' for item, row in pd.head(100).iterrows()]}",
+    f"{[str(row.Text) + ', ' for item, row in pd.head(300).iterrows()]}",
     safety_settings={
         HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
         HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
@@ -43,11 +43,12 @@ response = model.generate_content(
 )
 
 tweet_dic: list = eval(response.text.replace("```", "").replace("python", ""))
+print(len(tweet_dic))
 
 num = 0
 for (row, item) in pd.iterrows():
     if num <= len(tweet_dic):
-        score = (item.Biased*(1/0.5))+(float(tweet_dic[num])*(1/0.5))
+        score = (item.Biased)+(float(tweet_dic[num]))/2
         finalscore = 0
         if (float(item.Biased) + score)/2 <= 0.75:
             finalscore = 1
@@ -63,7 +64,8 @@ text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
 examples: list[Example] = list(map(Example.from_dict, text_as_docs, scores))
 text_cat.initialize(lambda: examples, nlp=nlp)
 text_cat.update(examples, drop=0.5)
-for i in range(2):
+for i in range(10):
+    print(i)
     random.shuffle(training_data)
         
     text: list[str] = list(map(lambda x: x[0], training_data))
