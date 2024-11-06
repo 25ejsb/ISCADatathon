@@ -1,5 +1,4 @@
-import pandas
-import spacy, random
+import pandas, ollama, spacy, random, threading
 
 # main goal, use perspective api to find the toxicity of common words used, then find the polarity and details along with it
 import google.generativeai as genai
@@ -31,31 +30,26 @@ pd = pandas.read_csv("./GoldStandard2024_Participants.csv")
 
 training_data = []
 
-model = genai.GenerativeModel("gemini-1.5-pro", 
-                              system_instruction="Only give the rating, no other information, a scale of 1 (least) through 100 (most) of how anti semetic it is, and write it as a list")
-response = model.generate_content(
-    f"{[str(row.Text) + ', ' for item, row in pd.head(300).iterrows()]}",
-    safety_settings={
-        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE
-    }
-)
-
-tweet_dic: list = eval(response.text.replace("```", "").replace("python", ""))
-print(len(tweet_dic))
-
-num = 0
-for (row, item) in pd.iterrows():
-    if num <= len(tweet_dic):
-        score = (item.Biased)+(float(tweet_dic[num]))/2
+def add_training_data(amount: int, start_index: int):
+    for i, (row, item) in enumerate(pd.head(amount).iterrows(), start=start_index):
+        print(i)
+        response = ollama.chat(
+            model="gemma2",
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"Rate this tweet from 1 to 10 based on how anti-semetic it is, JUST GIVE THE RATING, NOTHING ELSE: {item.Text}",
+                },
+            ],
+        )
+        score = (item.Biased)+(float(int(response["message"]["content"])/10))/2
         finalscore = 0
         if (float(item.Biased) + score)/2 <= 0.75:
             finalscore = 1
         training_data.append((item.Text, {"cats": {"score": finalscore}}))
         tweetlist.append(Tweet(item.ID, item.Username, item.CreateDate, item.Biased, item.Keyword, item.Text))
-    else: break
-    
+
+add_training_data(1000, 500) 
 
 #from TrainSpacy.py
 text: list[str] = list(map(lambda x: x[0], training_data))
@@ -64,16 +58,16 @@ text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
 examples: list[Example] = list(map(Example.from_dict, text_as_docs, scores))
 text_cat.initialize(lambda: examples, nlp=nlp)
 text_cat.update(examples, drop=0.5)
-for i in range(10):
-    print(i)
-    random.shuffle(training_data)
+# for i in range(10):
+#     print(i)
+#     random.shuffle(training_data)
         
-    text: list[str] = list(map(lambda x: x[0], training_data))
-    annotations: list = list(map(lambda x: x[1], training_data))
+#     text: list[str] = list(map(lambda x: x[0], training_data))
+#     annotations: list = list(map(lambda x: x[1], training_data))
         
-    text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
+#     text_as_docs: list[Doc] = list(map(nlp.make_doc, text))
         
-    examples: list[Example] = list(map(Example.from_dict, text_as_docs, annotations))
+#     examples: list[Example] = list(map(Example.from_dict, text_as_docs, annotations))
 
-    nlp.update(examples, drop=0.5)
+#     nlp.update(examples, drop=0.5)
 nlp.to_disk("./train.spacy")

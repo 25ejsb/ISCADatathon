@@ -16,4 +16,4 @@ def GetData(tweet:str):
     
     return doc.cats['score']
 
-print(GetData("i like jews")) # THIS IS FOR TESTING, DON'T TAKE THESE MESSAGES LITERALLY
+print(GetData("")) # THIS IS FOR TESTING, DON'T TAKE THESE MESSAGES LITERALLY
