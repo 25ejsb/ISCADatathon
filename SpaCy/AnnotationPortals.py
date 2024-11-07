@@ -1,10 +1,11 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.common.exceptions import NoSuchAttributeException, TimeoutException
+from selenium.common.exceptions import NoSuchAttributeException, TimeoutException, NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from dotenv import load_dotenv
-import time, os
+from CheckBiased import CheckBiased
+import os, time, langdetect
 
 load_dotenv()
 
@@ -80,14 +81,65 @@ password.send_keys(PASSWORD)
 submit = driver.find_element(By.CSS_SELECTOR, "input[type='submit']")
 driver.execute_script("arguments[0].click()", submit)
 
-num = 0
-while True:
-    driver.get(f"https://datathon.annotationportal.com/form/annotation/{link_groups[group]}/{num}")
-    page_has_loaded(driver, 2)
+def main_tweet(driver: webdriver.Chrome):
+    text = get_text(driver)
+    check_language(driver, text)
+    check_for_antisemitism(driver, text)
+
+def get_text(driver: webdriver.Chrome) -> str:
     iframe = driver.find_element(By.ID, "twitter-widget-0")
     driver.switch_to.frame(iframe)
     tweet = driver.find_element(By.CSS_SELECTOR, 'div[data-testid="tweetText"]')
-    print(tweet.text)
+    tweet_text = tweet.text # do while still accessible
+    driver.switch_to.default_content()
+    return tweet_text
+
+def check_language(driver: webdriver.Chrome, text: str):
+    if langdetect.detect(text) != "en":
+       checkbox = driver.find_element(By.ID, "id_can_read")
+       driver.execute_script("arguments[0].click()", checkbox)
+
+def check_for_antisemitism(driver: webdriver.Chrome, text: str):
+    antisemitism = driver.find_element(By.NAME, "antisemitism_rating")
+    biased = CheckBiased(text)
+    if biased <= 0.2:
+        antisemitism.send_keys("Confident not antisemitic")
+    elif biased > 0.2 and biased <= 0.4:
+        antisemitism.send_keys("Probably not antisemitic")
+    elif biased > 0.4 and biased <= 0.6:
+        antisemitism.send_keys("I don't know")
+    elif biased > 0.6 and biased <= 0.8:
+        antisemitism.send_keys("Probably antisemitic")
+    elif biased >= 0.8:
+        antisemitism.send_keys("Confident antisemitic")
+
+def check_content_type(driver: webdriver.Chrome) -> str:
+    if len(driver.find_elements(By.CLASS_NAME, "r-1s2bzr4")) > 0:
+        return "Attachment"
+    elif len(driver.find_elements(By.TAG_NAME, "img")) > 1:
+        return "Image"
+
+num = 0
+while True:
+    driver.get(f"https://datathon.annotationportal.com/form/annotation/{link_groups[group]}/{num}")
+    page_has_loaded(driver, 3)
+
+    try:
+        #Get Tweet Type
+        main_tweet(driver)
+    except NoSuchAttributeException:
+        print("Tweet box not found.")
+
+    try:
+        tweet = driver.find_element(By.CLASS_NAME, "mdl-card__media")
+        if tweet.text.find("The tweet cannot be found") != -1:
+            print("Hello")
+            checkbox = driver.find_element(By.NAME, "still_exists")
+            driver.execute_script("arguments[0].click()", checkbox)
+    except NoSuchAttributeException:
+        print("Tweet was found")
+
+    #Check if tweet is found
     break
 
 while True: pass
