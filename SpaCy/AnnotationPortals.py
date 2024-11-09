@@ -1,11 +1,12 @@
+import dotenv.variables
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchAttributeException, TimeoutException, NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from dotenv import load_dotenv
 from CheckBiased import CheckBiased
+from dotenv import load_dotenv
 import os, time, langdetect, ollama
 
 load_dotenv()
@@ -53,9 +54,8 @@ ihra_sections = [
     "None"
 ]
 
-USERNAME = os.environ.get("USERNAME")
-PASSWORD = os.environ.get("PASSWORD")
-
+USERNAME = os.environ.get("ISCA_USER")
+PASSWORD = os.environ.get("ISCA_PASSWORD")
 
 # LOGIN
 
@@ -68,6 +68,7 @@ while True:
     if group in link_groups:
         break
     else: print("Invalid Option!")
+    max_check = int(input("How many do you want to check? "))
 
 driver = webdriver.Chrome()
 driver.get("https://datathon.annotationportal.com/user/user_login")
@@ -105,10 +106,10 @@ def main_tweet(driver: webdriver.Chrome):
     driver.find_element(By.NAME, "content_type").send_keys(check_content_type(driver))
     driver.find_element(By.NAME, "sentiment_rating").send_keys(check_sentiment_rating(text))
     if distortion(text) == True:
-        checkbox = driver.find_element(By.ID, "Distortion")
+        checkbox = driver.find_element(By.NAME, "Distortion")
         driver.execute_script("arguments[0].click()", checkbox)
     if sarcasm(text) == True:
-        checkbox = driver.find_element(By.ID, "sarcasm")
+        checkbox = driver.find_element(By.NAME, "sarcasm")
         driver.execute_script("arguments[0].click()", checkbox)
     driver.find_element(By.NAME, "calling_out").send_keys(calling_out(text))
     driver.find_element(By.NAME, "denying").send_keys(denying(text))
@@ -263,16 +264,10 @@ def sarcasm(text: str) -> bool:
     )
     return bool(response["message"]["content"])
 
-num = 0
+num = 1
 while True:
     driver.get(f"https://datathon.annotationportal.com/form/annotation/{link_groups[group]}/{num}")
     page_has_loaded(driver, 3)
-
-    try:
-        #Get Tweet Type
-        main_tweet(driver)
-    except NoSuchAttributeException:
-        print("Tweet box not found.")
 
     try:
         tweet = driver.find_element(By.CLASS_NAME, "mdl-card__media")
@@ -283,4 +278,13 @@ while True:
     except NoSuchAttributeException:
         print("Tweet was found")
 
+    try:
+        #Get Tweet Type
+        main_tweet(driver)
+    except NoSuchAttributeException:
+        print("Tweet box not found.")
+
     #Check if tweet is found
+    if num <= max_check:
+        num+=1
+    else: break
