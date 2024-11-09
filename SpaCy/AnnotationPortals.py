@@ -1,11 +1,12 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchAttributeException, TimeoutException, NoSuchElementException
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from dotenv import load_dotenv
 from CheckBiased import CheckBiased
-import os, time, langdetect
+import os, time, langdetect, ollama
 
 load_dotenv()
 
@@ -35,6 +36,22 @@ link_groups = {
     "Jews2022_Sep-Dec": "26",
     "Jews2023_Jan-Apr": "27"
 }
+
+ihra_sections = [
+    "1.0 - Hatred Towards Jews",
+    "3.1.1 - Justifying harming of Jews in the name of a radical ideology",
+    "3.1.2 - Mendacious or stereotypical allegations about Jews as such + Jewish power",
+    "3.1.3 - Blaming the Jews as a people for what a single person or group has done",
+    "3.1.4 - Denying the fact, scope, mechanisms or intentionality of the Holocaust",
+    "3.1.5 - Accusing the Jews/Israel of inventing or exaggerating the Holocaust.",
+    "3.1.6 - Accusing Jews of being more loyal to Israel, or to 'Jewish priorities'",
+    "3.1.7 - Denying the Jewish people right to self-determination, e.g., 'Israel is racist per se'",
+    "3.1.8 - Applying double standards to Israel (sth. that is not expected of other nations)",
+    "3.1.9 - Classic antisemitism (e.g. blood libel) to characterize Israel or Israelis.",
+    "3.1.10 - Drawing comparisons of contemporary Israeli policy to that of the Nazis",
+    "3.1.11 - Holding Jews collectively responsible for actions of the state of Israel",
+    "None"
+]
 
 USERNAME = os.environ.get("USERNAME")
 PASSWORD = os.environ.get("PASSWORD")
@@ -85,6 +102,18 @@ def main_tweet(driver: webdriver.Chrome):
     text = get_text(driver)
     check_language(driver, text)
     check_for_antisemitism(driver, text)
+    driver.find_element(By.NAME, "content_type").send_keys(check_content_type(driver))
+    driver.find_element(By.NAME, "sentiment_rating").send_keys(check_sentiment_rating(text))
+    if distortion(text) == True:
+        checkbox = driver.find_element(By.ID, "Distortion")
+        driver.execute_script("arguments[0].click()", checkbox)
+    if sarcasm(text) == True:
+        checkbox = driver.find_element(By.ID, "sarcasm")
+        driver.execute_script("arguments[0].click()", checkbox)
+    driver.find_element(By.NAME, "calling_out").send_keys(calling_out(text))
+    driver.find_element(By.NAME, "denying").send_keys(denying(text))
+    driver.find_element(By.NAME, "holocaust").send_keys(holocaust(text))
+    driver.find_element(By.TAG_NAME, "html").send_keys(Keys.ENTER)
 
 def get_text(driver: webdriver.Chrome) -> str:
     iframe = driver.find_element(By.ID, "twitter-widget-0")
@@ -98,6 +127,7 @@ def check_language(driver: webdriver.Chrome, text: str):
     if langdetect.detect(text) != "en":
        checkbox = driver.find_element(By.ID, "id_can_read")
        driver.execute_script("arguments[0].click()", checkbox)
+       driver.find_element(By.TAG_NAME, "html").send_keys(Keys.ENTER)
 
 def check_for_antisemitism(driver: webdriver.Chrome, text: str):
     antisemitism = driver.find_element(By.NAME, "antisemitism_rating")
@@ -106,18 +136,132 @@ def check_for_antisemitism(driver: webdriver.Chrome, text: str):
         antisemitism.send_keys("Confident not antisemitic")
     elif biased > 0.2 and biased <= 0.4:
         antisemitism.send_keys("Probably not antisemitic")
+        check_content_type(driver)
+        driver.find_element(By.NAME, "IHRA_section").send_keys(check_ihra_section(text))
     elif biased > 0.4 and biased <= 0.6:
         antisemitism.send_keys("I don't know")
+        check_content_type(driver)
+        driver.find_element(By.NAME, "IHRA_section").send_keys(check_ihra_section(text))
     elif biased > 0.6 and biased <= 0.8:
         antisemitism.send_keys("Probably antisemitic")
+        check_content_type(driver)
+        driver.find_element(By.NAME, "IHRA_section").send_keys(check_ihra_section(text))
     elif biased >= 0.8:
         antisemitism.send_keys("Confident antisemitic")
+        check_content_type(driver)
+        driver.find_element(By.NAME, "IHRA_section").send_keys(check_ihra_section(text))
+
+def check_ihra_section(text: str) -> str:
+    response = ollama.chat(
+        model="gemma2",
+        messages=[
+            {
+                "role": "user",
+                "content": f"From this python list: {ihra_sections}, and this text {text}, determine what category does the text fall into from the python list, and then just output the correct section, DONT GIVE ANY OTHER INFORMATION",
+            },
+        ],
+    )
+    return str(response["message"]["content"]).replace("'", "")
 
 def check_content_type(driver: webdriver.Chrome) -> str:
-    if len(driver.find_elements(By.CLASS_NAME, "r-1s2bzr4")) > 0:
+    iframe = driver.find_element(By.ID, "twitter-widget-0")
+    driver.switch_to.frame(iframe)
+    if len(driver.find_elements(By.CSS_SELECTOR, "div.css-1dbjc4n.r-1ets6dv.r-1867qdf.r-1phboty.r-rs99b7.r-18u37iz.r-1ny4l3l.r-1udh08x.r-o7ynqc.r-6416eg")) > 0 or len(driver.find_elements(By.CSS_SELECTOR, 'div[data-testid="videoComponent"]')) > 0:
+        driver.switch_to.default_content()
         return "Attachment"
-    elif len(driver.find_elements(By.TAG_NAME, "img")) > 1:
+    elif len(driver.find_elements(By.CSS_SELECTOR, "img.css-9pa8cd")) > 1 and not check_if_reply(driver) or check_if_reply(driver) and len(driver.find_elements(By.CSS_SELECTOR, "img.css-9pa8cd")) > 2:
+        driver.switch_to.default_content()
         return "Image"
+    else:
+        driver.switch_to.default_content()
+        return "Text"
+
+def check_if_reply(driver: webdriver.Chrome) -> bool:
+    if len(driver.find_elements(By.CSS_SELECTOR, 'div[data-testid="tweetText"]')) > 1:
+        return True
+    else: return False
+
+def calling_out(text: str):
+    response = ollama.chat(
+        model="gemma2",
+        messages=[
+            {
+                "role": "user",
+                "content": f"is this tweet calling out or reporting on antisemitism (including in the past but excluding the Holocaust. However, if Holocaust commemoration includes references to the present or future, such as 'never again,' calling out applies). Reply with 'True' or 'False', DONT GIVE ANY OTHER INFORMATION: {text}",
+            },
+        ],
+    )
+    return response["message"]["content"]
+
+def denying(text: str):
+    response = ollama.chat(
+        model="gemma2",
+        messages=[
+            {
+                "role": "user",
+                "content": f"is this Denying a reasonable accusation of antisemitism. Reply with 'True' or 'False', DONT GIVE ANY OTHER INFORMATION: {text}",
+            },
+        ],
+    )
+    return response["message"]["content"]
+
+def holocaust(text: str):
+    response = ollama.chat(
+        model="gemma2",
+        messages=[
+            {
+                "role": "user",
+                "content": f"is this tweet related to the Holocaust, Reply with 'True' or 'False', DONT GIVE ANY OTHER INFORMATION: {text}",
+            },
+        ],
+    )
+    return response["message"]["content"]
+
+def check_sentiment_rating(text: str) -> int:
+    response = ollama.chat(
+        model="gemma2",
+        messages=[
+            {
+                "role": "user",
+                "content": f"Rate this tweet from 1 to 10 based on the sentiment, JUST GIVE THE RATING, NOTHING ELSE: {text}",
+            },
+        ],
+    )
+    score = int(response["message"]["content"])
+    if score <= 0.1:
+        return "Very Negative"
+    elif score > 0.1 and score <= 0.4:
+        return "Negative"
+    elif score > 0.4 and score <= 0.7:
+        return "I don't know"
+    elif score > 0.7 and score <= 0.9:
+        return "Positive"
+    elif score >= 1:
+        return "Very Positive"
+    
+def distortion(text: str) -> bool:
+    response = ollama.chat(
+        model="gemma2",
+        messages=[
+            {
+                "role": "user",
+                "content": f"is this Using imagery and language associated with the Holocaust for political, ideological, or commercial purposes unrelated to this history, Reply with 'True' or 'False', DONT GIVE ANY OTHER INFORMATION: {text}",
+            },
+        ],
+    )
+    return bool(response["message"]["content"])
+
+def sarcasm(text: str) -> bool:
+    response = ollama.chat(
+        model="gemma2",
+        messages=[
+            {
+                "role": "user",
+                "content": f"is this tweet sarcastic, Reply with 'True' or 'False', DONT GIVE ANY OTHER INFORMATION: {text}",
+            },
+        ],
+    )
+    return bool(response["message"]["content"])
 
 num = 0
 while True:
@@ -133,13 +277,10 @@ while True:
     try:
         tweet = driver.find_element(By.CLASS_NAME, "mdl-card__media")
         if tweet.text.find("The tweet cannot be found") != -1:
-            print("Hello")
             checkbox = driver.find_element(By.NAME, "still_exists")
             driver.execute_script("arguments[0].click()", checkbox)
+            driver.find_element(By.TAG_NAME, "html").send_keys(Keys.ENTER)
     except NoSuchAttributeException:
         print("Tweet was found")
 
     #Check if tweet is found
-    break
-
-while True: pass
