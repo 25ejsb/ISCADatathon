@@ -68,7 +68,7 @@ while True:
     if group in link_groups:
         break
     else: print("Invalid Option!")
-    max_check = int(input("How many do you want to check? "))
+max_check = int(input("How many do you want to check? "))
 
 driver = webdriver.Chrome()
 driver.get("https://datathon.annotationportal.com/user/user_login")
@@ -218,17 +218,17 @@ def holocaust(text: str):
     )
     return response["message"]["content"]
 
-def check_sentiment_rating(text: str) -> int:
+def check_sentiment_rating(text: str) -> float:
     response = ollama.chat(
         model="gemma2",
         messages=[
             {
                 "role": "user",
-                "content": f"Rate this tweet from 1 to 10 based on the sentiment, JUST GIVE THE RATING, NOTHING ELSE: {text}",
+                "content": f"Rate this tweet from 0 to 1 based on the sentiment, JUST GIVE THE RATING, NO OTHER INFORMATION: {text}",
             },
         ],
     )
-    score = int(response["message"]["content"])
+    score = float(response["message"]["content"])
     if score <= 0.1:
         return "Very Negative"
     elif score > 0.1 and score <= 0.4:
@@ -269,20 +269,17 @@ while True:
     driver.get(f"https://datathon.annotationportal.com/form/annotation/{link_groups[group]}/{num}")
     page_has_loaded(driver, 3)
 
-    try:
-        tweet = driver.find_element(By.CLASS_NAME, "mdl-card__media")
-        if tweet.text.find("The tweet cannot be found") != -1:
-            checkbox = driver.find_element(By.NAME, "still_exists")
-            driver.execute_script("arguments[0].click()", checkbox)
-            driver.find_element(By.TAG_NAME, "html").send_keys(Keys.ENTER)
-    except NoSuchAttributeException:
-        print("Tweet was found")
-
-    try:
+    tweet = driver.find_element(By.CLASS_NAME, "mdl-card__media")
+    if tweet.text.find("The tweet cannot be found") != -1:
+        checkbox = driver.find_element(By.NAME, "still_exists")
+        driver.execute_script("arguments[0].click()", checkbox)
+        driver.find_element(By.TAG_NAME, "html").send_keys(Keys.ENTER)
+    else:
+        try:
         #Get Tweet Type
-        main_tweet(driver)
-    except NoSuchAttributeException:
-        print("Tweet box not found.")
+            main_tweet(driver)
+        except NoSuchAttributeException:
+            print("Tweet box not found.")
 
     #Check if tweet is found
     if num <= max_check:
